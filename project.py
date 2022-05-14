@@ -89,6 +89,11 @@ def show_register():
 def show_questions():
     st.button('Post new question', on_click=change_page_state, args=('questions-page', 'post-question'))
     
+    col11, col12 = st.columns(2)
+    col11.text_input('Keyword to search for:', placeholder='Enter search keyword here', key='searchKeyword')
+    col12.write('Search:')
+    col12.button('>', on_click=change_page_state, args=('questions-page', 'search-results-page'), key='searchButton')
+    
     st.subheader('Questions')
     questions = run_query("""SELECT qnid, date_format(qnwhen, "%D %M %Y %r"), title, 
                           T.topicname as topic, ST.topicname as subtopic
@@ -97,11 +102,36 @@ def show_questions():
                           LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid
                           ORDER BY qnwhen DESC;""")
     
+    col21, col22 = st.columns(2)
+    col21.text_input('Question to open:', placeholder='Enter qnid here', key='openedQuestion')
+    col22.write('Open:')
+    col22.button(">", on_click=change_page_state, args=('questions-page', 'question-single'), key='openButton')
+    st.table(questions)
+
+def show_search_results():
+    st.button('Go back', on_click=change_page_state, args=('search-results-page', 'questions-page'))
+    
+    keyword = st.session_state["searchKeyword"]
+    st.subheader('Search results')
+    
+    # # For a full-text search to work, we must first create an index
+    # run_query("""ALTER TABLE question
+    #           ADD FULLTEXT(qnbody);""")
+    
+    results = run_query("""SELECT qnid, date_format(qnwhen, "%D %M %Y %r"), title, 
+                          T.topicname as topic, ST.topicname as subtopic
+                          FROM question Q
+                          JOIN topic T ON Q.topicid=T.topicid
+                          LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid
+                          WHERE MATCH(qnbody) AGAINST(%(keyword)s)
+                          ORDER BY qnwhen DESC;""",
+                          {'keyword': keyword})
+    
     col1, col2 = st.columns(2)
     col1.text_input('Question to open:', placeholder='Enter qnid here', key='openedQuestion')
     col2.text('Open:')
-    col2.button(">", on_click=change_page_state, args=('questions-page', 'question-single'))
-    st.table(questions)
+    col2.button(">", on_click=change_page_state, args=('search-results-page', 'question-single'))
+    st.table(results)
 
 def show_single_question():
     st.button('Go back', on_click=change_page_state, args=('question-single', 'questions-page'))
@@ -122,11 +152,12 @@ def show_single_question():
     st.write(question[4])
     
     resolved = question[5]
-    st.session_state['Qnid'] = openedQnid
     if resolved:
         st.button('View answers', on_click=change_page_state, args=('question-single', 'answers-page'))
     else:
         st.warning("Unresolved - no answers yet.")
+    
+    st.session_state['Qnid'] = openedQnid
     st.button("Post an answer", on_click=change_page_state, args=('question-single', 'post-answer'))
 
 def show_answers():
@@ -233,7 +264,7 @@ conn = init_connection()
 conn.autocommit = True
 
 
-# hardcode for testing
+# # hardcode for testing
 # st.session_state['login_valid'] = True
 # st.session_state['userid'] = 1
 # st.session_state['questions-page'] = True
@@ -266,3 +297,5 @@ else:
         show_answer_question()
     elif 'answers-page' in st.session_state:
         show_answers()
+    elif 'search-results-page' in st.session_state:
+        show_search_results()
