@@ -15,6 +15,7 @@ def run_query(operation, params=None):
         return cur.fetchall()
 
 def login(user_input, pass_input):
+    st.sidebar.header("Log in to get started.")
     userQuery = run_query("""SELECT userid
                      FROM user
                      WHERE username=%(username)s;""",
@@ -75,7 +76,7 @@ def show_register():
         submitted = st.form_submit_button('Submit')
         if submitted:
             if not fd_user or not fd_city or not fd_state or not fd_country:
-                st.error('All details but profile are required')
+                st.error('All details except profile are required')
             elif not validate_reg(fd_email, fd_passw, fd_cpass):
                 st.error('Invalid email or unmatching password')
             else:
@@ -134,25 +135,77 @@ def show_answers():
     openedQnid = st.session_state['Qnid']
     question = run_query("""SELECT title, qnbody
                          FROM question
-                         WHERE qnid=%(qnid)s
-                         """,{'qnid': openedQnid})[0]
+                         WHERE qnid=%(qnid)s;""",
+                         {'qnid': openedQnid})[0]
     answers = run_query("""SELECT date_format(answhen, "%D %M %Y %r"), ansbody, upvotes
                         FROM answer
-                        WHERE qnid=%(qnid)s
-                        """,{'qnid': openedQnid})
+                        WHERE qnid=%(qnid)s;""",
+                        {'qnid': openedQnid})
     
     st.markdown('**Question**: {}'.format(question[0]))
     st.write(question[1])
     st.table(answers)
 
+def show_postnew():
+    st.button('Go back', on_click=change_page_state, args=('post-question', 'questions-page'))
+    st.subheader('Post new question')
+
+    topics = run_query("""SELECT topicname
+                        FROM topic""")
+    topics = [t for sublist in topics for t in sublist]
+    fd_topic = None
+    
+    def get_topic_id():
+        return run_query("""SELECT topicid
+                            FROM topic
+                            WHERE topicname=%(tname)s;""",
+                            {'tname': fd_topic})[0][0]
+    
+    fd_topic = st.selectbox('Select topic:', topics, on_change=get_topic_id)
+    fd_topicid = get_topic_id()
+    
+    def get_subtopic_id():
+        return run_query("""SELECT tinnerid
+                         FROM topicinner
+                         WHERE topicname=%(tname)s;""",
+                         {'tname': fd_subtopic})[0][0]
+    
+    subtopics = run_query("""SELECT topicname
+                            FROM topicinner
+                            WHERE topicid=%(parenttopic)s;""",
+                            {'parenttopic': fd_topicid})
+    fd_subtopicid = None
+    
+    if subtopics:
+        subtopics = [t for sublist in subtopics for t in sublist]
+        fd_subtopic = st.selectbox('Select subtopic:', subtopics)
+        fd_subtopicid = get_subtopic_id()
+    else:
+        fd_subtopic = st.selectbox('Select subtopic:', subtopics, disabled=True)
+    
+    with st.form('register_form'):
+        fd_title = st.text_input('Title: ')
+        fd_body = st.text_area('Body: ')
+        
+        posted = st.form_submit_button('Post')
+        if posted:
+            if not fd_topic or not fd_title or not fd_body:
+                st.error('All details except subtopic are required')
+            else:
+                run_query("""INSERT INTO question (userid, topicid, tinnerid, title, qnbody, qnwhen)
+                        VALUES (%(userid)s, %(topicid)s, %(subtopicid)s, %(title)s, %(qnbody)s, NOW());""",
+                        {'userid': st.session_state['userid'], 'topicid': fd_topicid, 
+                         'subtopicid': fd_subtopicid, 'title': fd_title, 'qnbody': fd_body})
+                st.success('Posted!')
+
 # Start of app control flow
 st.title('Q&A webapp')
 st.sidebar.title('Q&A webapp')
 st.sidebar.info('by Mukund Vijayaraghavan [mv2167]')
-st.sidebar.header("Log in to get started.")
 
 conn = init_connection()
 conn.autocommit = True
+
 
 # hardcode for testing
 # st.session_state['login_valid'] = True
@@ -173,14 +226,14 @@ else:
                          FROM user
                          WHERE userid=%(userid)s;""",
                          {'userid': st.session_state['userid']})[0][0]
-    st.sidebar.write('Hello {}!'.format(username))
+    st.sidebar.header('Hello {}.'.format(username))
     st.sidebar.success('Logged in!')
     st.sidebar.button('Log out', on_click=logout)
     
     if 'questions-page' in st.session_state:
         show_questions()
-    # elif 'post-question' in st.session_state:
-    #     show_postnew()
+    elif 'post-question' in st.session_state:
+        show_postnew()
     elif 'question-single' in st.session_state:
         show_single_question()
     elif 'answers-page' in st.session_state:
