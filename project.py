@@ -31,6 +31,8 @@ def login(user_input, pass_input):
     if passQuery:
         st.session_state['login_valid'] = True
         st.session_state['userid'] = userQuery[0][0]
+        # show questions page by default
+        st.session_state['questions-page'] = True
     else:
         st.session_state['login_valid'] = False
 
@@ -78,6 +80,18 @@ def show_register():
                         'city': fd_city, 'state': fd_state, 'country': fd_country})
                 st.success('Registered!')
 
+def show_questions():
+    start_post = st.button("Post new question", key="postQuestion")
+    if start_post:
+        del st.session_state['questions-page']
+        st.session_state['post-question'] = True
+    
+    questions = run_query("""SELECT T.topicname as topic, ST.topicname as subtopic, qnwhen, title
+                          FROM question Q
+                          JOIN topic T ON Q.topicid=T.topicid
+                          LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid""")
+    st.table(questions)
+
 # Start of app control flow
 st.title('Q&A webapp')
 st.sidebar.title('Q&A webapp')
@@ -103,8 +117,11 @@ else:
     st.sidebar.success('Logged in!')
     st.sidebar.button('Logout', on_click=logout)
     
-    
-
-# rows = run_query("SELECT * from user;")
-# for row in rows:
-#     st.write(f"{row[0]} is {row[1]}")
+    if 'questions-page' in st.session_state:
+        show_questions()
+    # elif 'post-question' in st.session_state:
+    #     show_postnew()
+    # elif 'question-single' in st.session_state:
+    #     show_question(st.session_state['question-single'])
+    # elif 'answers-page' in st.session_state:
+    #     show_answers(st.session_state['answers-page'])
