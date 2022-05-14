@@ -1,3 +1,4 @@
+from ast import arg
 import re
 import mysql.connector
 import streamlit as st
@@ -43,7 +44,11 @@ def logout():
 def show_login():
     user_input = st.sidebar.text_input('Username: ')
     pass_input = st.sidebar.text_input('Password: ', type='password')
-    st.sidebar.button('Login', on_click=login, args=(user_input, pass_input))
+    st.sidebar.button('Log in', on_click=login, args=(user_input, pass_input))
+
+def change_page_state(prev, curr):
+    del st.session_state[prev]
+    st.session_state[curr] = True
 
 def validate_reg(email, passw, cpass):
     email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -54,7 +59,7 @@ def validate_reg(email, passw, cpass):
     return True
 
 def show_register():
-    st.write('Register')
+    st.subheader('Register')
 
     with st.form('register_form'):
         fd_email = st.text_input('Email: ')
@@ -81,24 +86,58 @@ def show_register():
                 st.success('Registered!')
 
 def show_questions():
-    start_post = st.button("Post new question", key="postQuestion")
-    if start_post:
-        del st.session_state['questions-page']
-        st.session_state['post-question'] = True
+    st.button('Post new question', on_click=change_page_state, args=('questions-page', 'post-question'))
     
-    questions = run_query("""SELECT T.topicname as topic, ST.topicname as subtopic, qnwhen, title
+    st.subheader('Questions')
+    questions = run_query("""SELECT qnid, T.topicname as topic, ST.topicname as subtopic, qnwhen, title
                           FROM question Q
                           JOIN topic T ON Q.topicid=T.topicid
-                          LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid""")
+                          LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid;""")
+    
+    col1, col2 = st.columns(2)
+    col1.text_input("Question to open:", placeholder="Enter qnid here", key="openedQuestion")
+    col2.text("Open:")
+    col2.button(">", on_click=change_page_state, args=('questions-page', 'question-single'))
     st.table(questions)
+
+def show_single_question():
+    st.button('Go back', on_click=change_page_state, args=('question-single', 'questions-page'))
+    
+    openedQnid = st.session_state['openedQuestion']
+    question = run_query("""SELECT T.topicname as topic, ST.topicname as subtopic, 
+                         date_format(qnwhen, "%D %M %Y %r"), title, qnbody, resolved
+                         FROM question Q
+                         JOIN topic T ON Q.topicid=T.topicid
+                         LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid
+                         WHERE qnid=%(qnid)s;""",
+                         {'qnid': openedQnid})[0]
+    
+    st.subheader(question[3])
+    st.markdown("**Topic**: {}".format(question[0]))
+    st.markdown("**Subtopic**: {}".format(question[1]))
+    st.caption("Posted on: {}".format(question[2]))
+    st.write(question[4])
+    
+    resolved = question[5]
+    if resolved:
+        st.button("View answers")
+    else:
+        st.warning("No answers yet.")
 
 # Start of app control flow
 st.title('Q&A webapp')
 st.sidebar.title('Q&A webapp')
 st.sidebar.info('by Mukund Vijayaraghavan [mv2167]')
+st.sidebar.header("Log in to get started.")
 
 conn = init_connection()
 conn.autocommit = True
+
+# hardcode for testing
+# st.session_state['login_valid'] = True
+# st.session_state['userid'] = 1
+# st.session_state['questions-page'] = True
+
 
 if 'login_valid' not in st.session_state:
     show_login()
@@ -115,13 +154,13 @@ else:
                          {'userid': st.session_state['userid']})[0][0]
     st.sidebar.write('Hello {}!'.format(username))
     st.sidebar.success('Logged in!')
-    st.sidebar.button('Logout', on_click=logout)
+    st.sidebar.button('Log out', on_click=logout)
     
     if 'questions-page' in st.session_state:
         show_questions()
     # elif 'post-question' in st.session_state:
     #     show_postnew()
-    # elif 'question-single' in st.session_state:
-    #     show_question(st.session_state['question-single'])
+    elif 'question-single' in st.session_state:
+        show_single_question()
     # elif 'answers-page' in st.session_state:
     #     show_answers(st.session_state['answers-page'])
