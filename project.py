@@ -89,21 +89,23 @@ def show_questions():
     st.button('Post new question', on_click=change_page_state, args=('questions-page', 'post-question'))
     
     st.subheader('Questions')
-    questions = run_query("""SELECT qnid, T.topicname as topic, ST.topicname as subtopic, qnwhen, title
+    questions = run_query("""SELECT qnid, date_format(qnwhen, "%D %M %Y %r"), title, 
+                          T.topicname as topic, ST.topicname as subtopic
                           FROM question Q
                           JOIN topic T ON Q.topicid=T.topicid
-                          LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid;""")
+                          LEFT JOIN topicinner ST ON Q.tinnerid=ST.tinnerid
+                          ORDER BY qnwhen DESC;""")
     
     col1, col2 = st.columns(2)
-    col1.text_input("Question to open:", placeholder="Enter qnid here", key="openedQuestion")
-    col2.text("Open:")
+    col1.text_input('Question to open:', placeholder='Enter qnid here', key='openedQuestion')
+    col2.text('Open:')
     col2.button(">", on_click=change_page_state, args=('questions-page', 'question-single'))
     st.table(questions)
 
 def show_single_question():
     st.button('Go back', on_click=change_page_state, args=('question-single', 'questions-page'))
     
-    openedQnid = st.session_state['openedQuestion']
+    openedQnid = st.session_state['openedQuestion'] if 'openedQuestion' in st.session_state else st.session_state['Qnid']
     question = run_query("""SELECT T.topicname as topic, ST.topicname as subtopic, 
                          date_format(qnwhen, "%D %M %Y %r"), title, qnbody, resolved
                          FROM question Q
@@ -113,16 +115,35 @@ def show_single_question():
                          {'qnid': openedQnid})[0]
     
     st.subheader(question[3])
-    st.markdown("**Topic**: {}".format(question[0]))
-    st.markdown("**Subtopic**: {}".format(question[1]))
-    st.caption("Posted on: {}".format(question[2]))
+    st.markdown('**Topic**: {}'.format(question[0]))
+    st.markdown('**Subtopic**: {}'.format(question[1]))
+    st.caption('Posted on: {}'.format(question[2]))
     st.write(question[4])
     
     resolved = question[5]
     if resolved:
-        st.button("View answers")
+        st.session_state['Qnid'] = openedQnid
+        st.button('View answers', on_click=change_page_state, args=('question-single', 'answers-page'))
     else:
-        st.warning("No answers yet.")
+        st.warning("Unresolved - no answers yet.")
+
+def show_answers():
+    st.button('Go back', on_click=change_page_state, args=('answers-page', 'question-single'))
+    
+    st.subheader('Answers')
+    openedQnid = st.session_state['Qnid']
+    question = run_query("""SELECT title, qnbody
+                         FROM question
+                         WHERE qnid=%(qnid)s
+                         """,{'qnid': openedQnid})[0]
+    answers = run_query("""SELECT date_format(answhen, "%D %M %Y %r"), ansbody, upvotes
+                        FROM answer
+                        WHERE qnid=%(qnid)s
+                        """,{'qnid': openedQnid})
+    
+    st.markdown('**Question**: {}'.format(question[0]))
+    st.write(question[1])
+    st.table(answers)
 
 # Start of app control flow
 st.title('Q&A webapp')
@@ -162,5 +183,5 @@ else:
     #     show_postnew()
     elif 'question-single' in st.session_state:
         show_single_question()
-    # elif 'answers-page' in st.session_state:
-    #     show_answers(st.session_state['answers-page'])
+    elif 'answers-page' in st.session_state:
+        show_answers()
