@@ -1,4 +1,3 @@
-from ast import arg
 import re
 import mysql.connector
 import streamlit as st
@@ -15,7 +14,6 @@ def run_query(operation, params=None):
         return cur.fetchall()
 
 def login(user_input, pass_input):
-    st.sidebar.header("Log in to get started.")
     userQuery = run_query("""SELECT userid
                      FROM user
                      WHERE username=%(username)s;""",
@@ -35,6 +33,7 @@ def login(user_input, pass_input):
         st.session_state['userid'] = userQuery[0][0]
         # show questions page by default
         st.session_state['questions-page'] = True
+        st.session_state['page_history'] = ['questions-page']
     else:
         st.session_state['login_valid'] = False
 
@@ -43,11 +42,18 @@ def logout():
     del st.session_state['userid']
 
 def show_login():
+    st.sidebar.header("Log in to get started.")
     user_input = st.sidebar.text_input('Username: ')
     pass_input = st.sidebar.text_input('Password: ', type='password')
     st.sidebar.button('Log in', on_click=login, args=(user_input, pass_input))
 
 def change_page_state(prev, curr):
+    sstate = st.session_state['page_history']
+    if curr not in sstate:
+        st.session_state['page_history'].append(curr)
+    else:
+        st.session_state['page_history'].pop()
+    
     del st.session_state[prev]
     st.session_state[curr] = True
 
@@ -109,9 +115,13 @@ def show_questions():
     st.table(questions)
 
 def show_search_results():
-    st.button('Go back', on_click=change_page_state, args=('search-results-page', 'questions-page'))
+    st.button('Go back', on_click=change_page_state, args=('search-results-page', st.session_state['page_history'][-2]))
     
-    keyword = st.session_state["searchKeyword"]
+    if 'searchKeyword' in st.session_state:
+        keyword = st.session_state['searchKeyword']
+        st.session_state['searchKey'] = keyword
+    else:
+        keyword = st.session_state['searchKey']
     st.subheader('Search results')
     
     # # For a full-text search to work, we must first create an index
@@ -134,7 +144,7 @@ def show_search_results():
     st.table(results)
 
 def show_single_question():
-    st.button('Go back', on_click=change_page_state, args=('question-single', 'questions-page'))
+    st.button('Go back', on_click=change_page_state, args=('question-single', st.session_state['page_history'][-2]))
     
     openedQnid = st.session_state['openedQuestion'] if 'openedQuestion' in st.session_state else st.session_state['Qnid']
     question = run_query("""SELECT T.topicname as topic, ST.topicname as subtopic, 
@@ -161,7 +171,7 @@ def show_single_question():
     st.button("Post an answer", on_click=change_page_state, args=('question-single', 'post-answer'))
 
 def show_answers():
-    st.button('Go back', on_click=change_page_state, args=('answers-page', 'question-single'))
+    st.button('Go back', on_click=change_page_state, args=('answers-page', st.session_state['page_history'][-2]))
     
     st.subheader('Answers')
     openedQnid = st.session_state['openedQuestion'] if 'openedQuestion' in st.session_state else st.session_state['Qnid']
@@ -179,7 +189,7 @@ def show_answers():
     st.table(answers)
 
 def show_postnew():
-    st.button('Go back', on_click=change_page_state, args=('post-question', 'questions-page'))
+    st.button('Go back', on_click=change_page_state, args=('post-question', st.session_state['page_history'][-2]))
     st.subheader('Post new question')
 
     topics = run_query("""SELECT topicname
@@ -231,7 +241,7 @@ def show_postnew():
                 st.success('Posted!')
 
 def show_answer_question():
-    st.button('Go back', on_click=change_page_state, args=('post-answer', 'question-single'))
+    st.button('Go back', on_click=change_page_state, args=('post-answer', st.session_state['page_history'][-2]))
     
     qnid = st.session_state['openedQuestion'] if 'openedQuestion' in st.session_state else st.session_state['Qnid']
     question = run_query("""SELECT title, qnbody
@@ -253,7 +263,6 @@ def show_answer_question():
                         VALUES (%(qnid)s, %(userid)s, NOW(), %(ansbody)s);""",
                         {'qnid': qnid, 'userid': st.session_state['userid'], 'ansbody': ansbody})
                 st.success('Posted!')
-    
 
 # Start of app control flow
 st.title('Q&A webapp')
@@ -262,6 +271,9 @@ st.sidebar.info('by Mukund Vijayaraghavan [mv2167]')
 
 conn = init_connection()
 conn.autocommit = True
+# initialize page history
+if 'page_history' not in st.session_state:
+    st.session_state['page_history'] = []
 
 
 # # hardcode for testing
@@ -286,6 +298,8 @@ else:
     st.sidebar.header('Hello {}.'.format(username))
     st.sidebar.success('Logged in!')
     st.sidebar.button('Log out', on_click=logout)
+    
+    # st.write(st.session_state['page_history'])
     
     if 'questions-page' in st.session_state:
         show_questions()
