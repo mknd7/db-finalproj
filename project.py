@@ -42,7 +42,7 @@ def logout():
     del st.session_state['userid']
 
 def show_login():
-    st.sidebar.header("Log in to get started.")
+    st.sidebar.header('Log in to get started.')
     user_input = st.sidebar.text_input('Username: ')
     pass_input = st.sidebar.text_input('Password: ', type='password')
     st.sidebar.button('Log in', on_click=login, args=(user_input, pass_input))
@@ -165,10 +165,10 @@ def show_single_question():
     if resolved:
         st.button('View answers', on_click=change_page_state, args=('question-single', 'answers-page'))
     else:
-        st.warning("Unresolved - no answers yet.")
+        st.warning('Unresolved - no answers yet.')
     
     st.session_state['Qnid'] = openedQnid
-    st.button("Post an answer", on_click=change_page_state, args=('question-single', 'post-answer'))
+    st.button('Post an answer', on_click=change_page_state, args=('question-single', 'post-answer'))
 
 def show_answers():
     st.button('Go back', on_click=change_page_state, args=('answers-page', st.session_state['page_history'][-2]))
@@ -253,7 +253,7 @@ def show_answer_question():
     st.write(question[1])
     
     with st.form('answer_form'):
-        ansbody = st.text_area("Type your answer:")
+        ansbody = st.text_area('Type your answer:')
         answered = st.form_submit_button('Answer')
         if answered:
             if not ansbody:
