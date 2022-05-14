@@ -7,17 +7,13 @@ import streamlit as st
 def init_connection():
     return mysql.connector.connect(**st.secrets['mysql'])
 
-# Perform query (using st.experimental_memo to only rerun when the query changes or after 10 min)
-@st.experimental_memo(ttl=600)
 def run_query(operation, params=None):
     with conn.cursor() as cur:
         # Operation and params separately, SQL injection-safe
         cur.execute(operation, params)
-        conn.commit()
         return cur.fetchall()
 
-def attempt_login(user_input, pass_input):
-   
+def login(user_input, pass_input):
     userQuery = run_query("""SELECT userid
                      FROM user
                      WHERE username=%(username)s;""",
@@ -45,7 +41,7 @@ def logout():
 def show_login():
     user_input = st.sidebar.text_input('Username: ')
     pass_input = st.sidebar.text_input('Password: ', type='password')
-    st.sidebar.button('Login', on_click=attempt_login, args=(user_input, pass_input))
+    st.sidebar.button('Login', on_click=login, args=(user_input, pass_input))
 
 def validate_reg(email, passw, cpass):
     email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
@@ -77,9 +73,9 @@ def show_register():
                 st.error('Invalid email or unmatching password')
             else:
                 run_query("""INSERT INTO user (username, email, password, profile, addr_city, addr_state, addr_country)
-                          VALUES (%(uname)s, %(email)s, %(passw)s, %(profile)s, %(city)s, %(state)s, %(country)s);""",
-                          {'uname': fd_user, 'email': fd_email, 'passw': fd_passw, 'profile': fd_profile,
-                           'city': fd_city, 'state': fd_state, 'country': fd_country})
+                        VALUES (%(uname)s, %(email)s, %(passw)s, %(profile)s, %(city)s, %(state)s, %(country)s);""",
+                        {'uname': fd_user, 'email': fd_email, 'passw': fd_passw, 'profile': fd_profile,
+                        'city': fd_city, 'state': fd_state, 'country': fd_country})
                 st.success('Registered!')
 
 # Start of app control flow
@@ -88,6 +84,7 @@ st.sidebar.title('Q&A webapp')
 st.sidebar.info('by Mukund Vijayaraghavan [mv2167]')
 
 conn = init_connection()
+conn.autocommit = True
 
 if 'login_valid' not in st.session_state:
     show_login()
@@ -97,6 +94,7 @@ elif not st.session_state['login_valid']:
     show_register()
     st.sidebar.error('Invalid credentials!')
 else:
+    # show username on the side
     username = run_query("""SELECT username
                          FROM user
                          WHERE userid=%(userid)s;""",
@@ -104,6 +102,8 @@ else:
     st.sidebar.write('Hello {}!'.format(username))
     st.sidebar.success('Logged in!')
     st.sidebar.button('Logout', on_click=logout)
+    
+    
 
 # rows = run_query("SELECT * from user;")
 # for row in rows:
