@@ -122,8 +122,8 @@ def show_single_question():
     st.write(question[4])
     
     resolved = question[5]
+    st.session_state['Qnid'] = openedQnid
     if resolved:
-        st.session_state['Qnid'] = openedQnid
         st.button('View answers', on_click=change_page_state, args=('question-single', 'answers-page'))
     else:
         st.warning("Unresolved - no answers yet.")
@@ -133,7 +133,7 @@ def show_answers():
     st.button('Go back', on_click=change_page_state, args=('answers-page', 'question-single'))
     
     st.subheader('Answers')
-    openedQnid = st.session_state['Qnid']
+    openedQnid = st.session_state['openedQuestion'] if 'openedQuestion' in st.session_state else st.session_state['Qnid']
     question = run_query("""SELECT title, qnbody
                          FROM question
                          WHERE qnid=%(qnid)s;""",
@@ -202,7 +202,7 @@ def show_postnew():
 def show_answer_question():
     st.button('Go back', on_click=change_page_state, args=('post-answer', 'question-single'))
     
-    qnid = st.session_state['Qnid']
+    qnid = st.session_state['openedQuestion'] if 'openedQuestion' in st.session_state else st.session_state['Qnid']
     question = run_query("""SELECT title, qnbody
                          FROM question
                          WHERE qnid=%(qnid)s;""",
