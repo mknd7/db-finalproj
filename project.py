@@ -1,6 +1,6 @@
-from tkinter import E
-import streamlit as st
+import re
 import mysql.connector
+import streamlit as st
 
 # Initialize connection (using st.experimental_singleton to only run once)
 @st.experimental_singleton
@@ -46,26 +46,42 @@ def show_login():
     pass_input = st.sidebar.text_input("Password: ", type="password")
     st.sidebar.button("Login", on_click=attempt_login, args=(user_input, pass_input))
 
+def validate_reg(email, passw, cpass):
+    email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    if not re.match(email_regex, email):
+        return False
+    if passw != cpass:
+        return False
+    return True
+
 def show_register():
     st.write("Register")
-    with st.form("my_form"):
-        
-        f_email = st.text_input("Email: ")
-        f_user = st.text_input("Username: ")
-        f_pass = st.text_input("Password: ", type="password")
-        f_cpass = st.text_input("Confirm password: ", type="password")
-        
-        f_city = st.text_input("City: ")
-        f_state = st.text_input("State: ")
-        f_country = st.text_input("Country: ")
-        f_profile = st.text_area("Profile: ")
 
-        registered = st.form_submit_button("Register")
-        if registered:
-            st.write("Registered!")
+    with st.form("register_form"):
+        fd_email = st.text_input("Email: ")
+        fd_user = st.text_input("Username: ")
+        fd_passw = st.text_input("Password: ", type="password")
+        fd_cpass = st.text_input("Confirm password: ", type="password")
+        
+        fd_city = st.text_input("City: ")
+        fd_state = st.text_input("State: ")
+        fd_country = st.text_input("Country: ")
+        fd_profile = st.text_area("Profile: ")
+        
+        submitted = st.form_submit_button("Submit")
+        if submitted:
+            if not fd_user or not fd_city or not fd_state or not fd_country:
+                st.error("All details but profile are required")
+            elif not validate_reg(fd_email, fd_passw, fd_cpass):
+                st.error("Invalid email or unmatching password")
+            else:
+                st.success("Registered!")
 
 # Start of app control flow
 st.title("Q&A webapp")
+st.sidebar.title("Q&A webapp")
+st.sidebar.info("by Mukund Vijayaraghavan [mv2167]")
+
 conn = init_connection()
 
 if "login_valid" not in st.session_state:
