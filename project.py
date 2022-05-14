@@ -127,6 +127,7 @@ def show_single_question():
         st.button('View answers', on_click=change_page_state, args=('question-single', 'answers-page'))
     else:
         st.warning("Unresolved - no answers yet.")
+    st.button("Post an answer", on_click=change_page_state, args=('question-single', 'post-answer'))
 
 def show_answers():
     st.button('Go back', on_click=change_page_state, args=('answers-page', 'question-single'))
@@ -198,6 +199,31 @@ def show_postnew():
                          'subtopicid': fd_subtopicid, 'title': fd_title, 'qnbody': fd_body})
                 st.success('Posted!')
 
+def show_answer_question():
+    st.button('Go back', on_click=change_page_state, args=('post-answer', 'question-single'))
+    
+    qnid = st.session_state['Qnid']
+    question = run_query("""SELECT title, qnbody
+                         FROM question
+                         WHERE qnid=%(qnid)s;""",
+                         {'qnid': qnid})[0]
+    
+    st.subheader(question[0])
+    st.write(question[1])
+    
+    with st.form('answer_form'):
+        ansbody = st.text_area("Type your answer:")
+        answered = st.form_submit_button('Answer')
+        if answered:
+            if not ansbody:
+                st.error('No answer entered!')
+            else:
+                run_query("""INSERT INTO answer (qnid, userid, answhen, ansbody)
+                        VALUES (%(qnid)s, %(userid)s, NOW(), %(ansbody)s);""",
+                        {'qnid': qnid, 'userid': st.session_state['userid'], 'ansbody': ansbody})
+                st.success('Posted!')
+    
+
 # Start of app control flow
 st.title('Q&A webapp')
 st.sidebar.title('Q&A webapp')
@@ -236,5 +262,7 @@ else:
         show_postnew()
     elif 'question-single' in st.session_state:
         show_single_question()
+    elif 'post-answer' in st.session_state:
+        show_answer_question()
     elif 'answers-page' in st.session_state:
         show_answers()
