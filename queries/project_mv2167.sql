@@ -2,7 +2,7 @@ CREATE TABLE User (
   userid INT NOT NULL AUTO_INCREMENT,
   username VARCHAR(64) NOT NULL,
   email VARCHAR(64) NOT NULL,
-  password VARCHAR(64) NOT NULL,
+  password CHAR(32) NOT NULL, -- password is hashed using MD5()
   profile TEXT(140),
   status VARCHAR(20) NOT NULL DEFAULT 'beginner',
   addr_city VARCHAR(45),
@@ -19,7 +19,6 @@ CREATE TABLE Topic (
   topicname VARCHAR(45) NOT NULL,
   PRIMARY KEY (topicid),
   UNIQUE (topicname)
-
 );
 
 CREATE TABLE TopicInner (
@@ -44,7 +43,7 @@ CREATE TABLE Question (
 );
 
 CREATE TABLE Answer (
-  ansid INT NOT NULL,
+  ansid INT NOT NULL AUTO_INCREMENT,
   qnid INT NOT NULL,
   userid INT NOT NULL,
   answhen DATETIME,

@@ -1,0 +1,27 @@
+User - userid (pk), username, profile, status
+- profile is a short brief (text)
+
+Question - qid (pk), userid (fk), topicid (fk), when, title, body, resolved
+- when is date + time
+- one question can of course have multiple answers
+
+Topic - topicid (pk), topicname
+TopicInner - tinnerid (pk), topicid (fk), topicname
+(multi-level hierarchy of topics)
+
+Answer - aid (pk), qid (fk), userid (fk), when, answerbody, best, upvotes
+- when is date + time
+- upvotes can be awarded by any user
+
+
+Constraints:
+- status is one of [beginner, intermediate, advanced, expert]
+- topic is a single keyword or phrase (not a set of keywords)
+
+
+Assumptions:
+- already implied: a resolved question need not have an answer
+- already implied: every question is associated with exactly one topic
+- username and email can be changed by user, so we have separate userid
+- questions cannot be jointly asked or answered; every question and answer has exactly one user associated with it
+- an answer's topic is inferred from its linked question's topic
