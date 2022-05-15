@@ -21,7 +21,7 @@ The objective of this project is to create a **Q&A system** using a database and
 
 
 
-**Running the project**:
+**Running the project** (`project.py`):
 
 1. First, the DB must be created (preferably using MYSQL Workbench) - this can be done using `queries/project_mv2167.sql`, which contains the `CREATE` statements.
 
@@ -29,14 +29,20 @@ The objective of this project is to create a **Q&A system** using a database and
 
 2. (Optional) Populate DB with data, either using Workbench's GUI or manual SQL statements.
 
-3. To enable full-text search (across the `qnbody` attribute - question content):
+3. To enable full-text search (across the `qnbody` attribute - question content), we must first create an index (this can also be done during `CREATE`):
 
    ```
    ALTER TABLE question
    ADD FULLTEXT(qnbody)
    ```
 
-4. Add a `.streamlit/secrets.toml` file that looks like this:
+4. Install `streamlit` if not installed already:
+
+   ```
+   pip install streamlit
+   ```
+
+5. Add a `.streamlit/secrets.toml` file (to protect DB credentials) that looks like this:
 
    ```
    [mysql]
@@ -53,4 +59,4 @@ The objective of this project is to create a **Q&A system** using a database and
    streamlit run project.py
    ```
 
-6. Populate DB with data using app interface, then test out the functionality!
+6. Populate DB with data using the app interface, then test out the functionality!
